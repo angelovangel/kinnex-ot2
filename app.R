@@ -35,8 +35,9 @@ tab1 <-  fluidPage(
       column(6, 
         numericInput('primervol', 'Primer premix vol', value = 2.5, step = 0.1, min = 1, max = 5)),
       column(12, 
-        downloadButton('download_script', 'Opentrons script', style = 'margin-top:20px'),
-        actionButton('deck', 'Show deck', style = 'margin-top:20px')
+        downloadButton('download_script', 'OT2 script', style = 'margin-top:20px'),
+        actionButton('deck', 'Deck', style = 'margin-top:20px'),
+        uiOutput('show_protocol', inline = T)
       )
     ),
     box(width = 9, status = "warning", solidHeader = FALSE, height = 420,
@@ -81,7 +82,7 @@ ui <- dashboardPage(skin = 'yellow',
                     body = dashboardBody(
                       useShinyjs(),
                       tabsetPanel(
-                        tabPanel(title = "Enter samples data", icon = icon("table"), tab1),
+                        tabPanel(title = "Protocol setup", icon = icon("table"), tab1),
                         tabPanel(title = "Opentrons script preview", icon = icon('code'), tab2)
                         #tabPanel(title = 'Instructions', icon = icon('list'), tab3)
                       )
@@ -196,13 +197,13 @@ server = function(input, output, session) {
     )
   })
   
+  
   ## OUTPUTS
   output$mastermix <- renderReactable({
     pcrvol <- input$MMvol + input$primervol
     df <- tibble(
       Component = c('Water', 'Kinnex PCR mix(2x)', 'Template'),
       Volume = c(pcrvol*5, pcrvol*8.5, pcrvol*1.8)
-      #MM = if_else(Component == 'cDNA from Step 3.35', 0, Volume * as.numeric(input$nsamples))
     )
     
     reactable(
@@ -246,6 +247,16 @@ server = function(input, output, session) {
     )
   })
   
+  ## Decide which protocol to show
+  
+  output$show_protocol <- renderUI({
+    actionButton(
+      'showpdf', 'Protocol', 
+      style = 'margin-top:20px', 
+      onclick = paste0("window.open('", input$protocol, ".pdf')")
+      )
+  })
+  
   output$htmlout <- renderUI({
    paste0("Preview for tuberack and PCR plate")
   })
@@ -257,13 +268,13 @@ server = function(input, output, session) {
   ### DOWNLOADS
   output$download_script <- downloadHandler(
     filename = function() {
-      paste0(format(Sys.time(), "%Y%m%d-%H%M%S"), '-mas-pcr.py')
+      paste0(format(Sys.time(), "%Y%m%d-%H%M%S"), '-kinnex-pcr.py')
     },
     content = function(con) {
       # at download time, replace name so that it appears on the Opentrons app
-      replacement <- paste0(format(Sys.time(), "%Y%m%d-%H%M%S"), '-mas-pcr.py')
+      replacement <- paste0(format(Sys.time(), "%Y%m%d-%H%M%S"), '-kinnex-pcr.py')
       write(myprotocol() %>%
-              str_replace(pattern = "MAS-seq-IsoSeq.py", 
+              str_replace(pattern = "08-kinnex-pcr.py", 
                           replacement = replacement), 
             con)
     }
