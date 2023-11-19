@@ -11,6 +11,8 @@ library(rmarkdown)
 library(curl)
 library(plater)
 
+source('global.R')
+
 # for use on rack and aluminium block 
 wells24 <- lapply(1:6, function(x) {str_c(LETTERS[1:4], x)}) %>% unlist()
 wells96 <- lapply(1:12, function(x) {str_c(LETTERS[1:8], x)}) %>% unlist()
@@ -55,11 +57,11 @@ tab1 <-  fluidPage(
       )
   ),
   fluidRow(
-    box(width = 12, color = "NA", solidHeader = FALSE, title = 'Instructions', collapsible = T, collapsed = T,
+    box(width = 12, color = "NA", solidHeader = FALSE, title = 'Instructions', collapsible = T, collapsed = F,
         tags$div("For each sample, prepare Mastermix and place in positions marked s1, s2, etc. 
                Place empty 1.5ml tubes in positions p1, p2, etc. The pooled PCR products for 's1' will be placed in 'p1'."
         ),
-        tags$div('Mastermix preparation:'),
+        tags$div('Mastermix preparation (for 1 sample):'),
         reactableOutput('mastermix', width = "25%")
     )
   )
@@ -73,7 +75,7 @@ tab2 <- fluidRow(
 )
 
 
-ui <- dashboardPage(skin = 'yellow',
+ui <- dashboardPage(skin = 'black',
                     #useShinyalert(),
                     
                     header = dashboardHeader(title = "PacBio Kinnex PCR for Opentrons", titleWidth = 400),
@@ -106,6 +108,12 @@ server = function(input, output, session) {
   
   
   ### REACTIVES
+  mmix_react <- reactiveValues(
+    water = '132-X ul',
+    kinnexmix = '165 ul',
+    template = 'X ul (35 ng)',
+    total = '297 ul'
+  )
   
   rack_df <- reactive({
     data.frame(
@@ -186,16 +194,25 @@ server = function(input, output, session) {
   })
   
   observeEvent(input$protocol, {
-    updateNumericInput(
-      session = session, 
-      'MMvol', 
-      value = case_when(
-       input$protocol == 'flrna' ~ 20,
-       input$protocol == 'scrna' ~ 15,
-       input$protocol == '16s' ~ 22.5,
+    
+    updateSelectizeInput(
+      session = session,
+      'plex',
+      selected = case_when(
+        input$protocol == 'flrna' ~ 8,
+        input$protocol == 'scrna' ~ 16,
+        input$protocol == '16s' ~ 12
       )
     )
+    
+    mmix_react$water = case_when(
+      input$protocol == 'flrna' ~ '88 - X ul',
+      input$protocol == 'scrna' ~ '176 - X ul',
+      input$protocol == '16s' ~ '132 - X ul'
+    )
   })
+  
+  
   
   
   ## OUTPUTS
@@ -203,14 +220,14 @@ server = function(input, output, session) {
     pcrvol <- input$MMvol + input$primervol
     df <- tibble(
       Component = c('Water', 'Kinnex PCR mix(2x)', 'Template'),
-      Volume = c(pcrvol*5, pcrvol*8.5, pcrvol*1.8)
+      Volume = c(mmix_react$water, mmix_react$kinnexmix, mmix_react$template)
     )
     
     reactable(
         df,
         columns = list(
           Component = colDef(footer = 'Total'),
-          Volume = colDef(format = colFormat(digits = 1), footer = function(values) sprintf("%.1f", sum(values)))
+          Volume = colDef(footer = mmix_react$total)
         ),
         defaultColDef = colDef(footerStyle = list(fontWeight = "bold"))
       )
