@@ -20,14 +20,14 @@ wells96 <- lapply(1:12, function(x) {str_c(LETTERS[1:8], x)}) %>% unlist()
 
 tab1 <-  fluidPage(
   fluidRow(
-    box(width = 3, status = "warning", solidHeader = FALSE, height = 420,
+    box(width = 3, status = "warning", solidHeader = FALSE, height = 450,
       collapsible = F,
       column(12,
         selectizeInput('protocol', 'Kinnex protocol', 
                        choices = c('PacBio 16S' = '16s', 'PacBio full-length RNA' = 'flrna', 'PacBio single-cell RNA' = 'scrna'), 
                        selected = 'PacBio 16S', multiple = FALSE)),
       column(6, 
-        selectizeInput('plex', 'Kinnex plex', choices = c(8,12,16), selected = 12, multiple = FALSE)),
+        selectizeInput('plex', 'Kinnex plex', choices = c(8,10,12,14,16), selected = 12, multiple = FALSE)),
       column(6, 
         selectizeInput('nsamples', 'Number of samples', choices = c(1:6), selected = 1, multiple = FALSE)),
       column(12, 
@@ -42,12 +42,15 @@ tab1 <-  fluidPage(
         uiOutput('show_protocol', inline = T)
       )
     ),
-    box(width = 9, status = "warning", solidHeader = FALSE, height = 420,
+    box(width = 9, status = "warning", solidHeader = FALSE, height = 450,
       title = htmlOutput('htmlout'), collapsible = F,
       fluidRow(
         column(width = 4,
-               tags$p('24 tuberack eppendorf 1.5ml'),
-               reactableOutput('rack')
+               tags$p('24 tuberack eppendorf 1.5ml - samples and pools'),
+               reactableOutput('rack'),
+               tags$hr(),
+               tags$p('24 aluminium block 0.5ml - Kinnex primers'),
+               reactableOutput('block')
                ),
         column(width = 8,
                tags$p('PCR plate on ODTC'),
@@ -59,7 +62,7 @@ tab1 <-  fluidPage(
   fluidRow(
     box(width = 12, color = "NA", solidHeader = FALSE, title = 'Instructions', collapsible = T, collapsed = F,
         tags$div("For each sample, prepare Mastermix and place in positions marked s1, s2, etc. 
-               Place empty 1.5ml tubes in positions p1, p2, etc. The pooled PCR products for 's1' will be placed in 'p1'."
+               Place empty 1.5ml tubes in positions p1, p2, etc. Place Kinnex primer mixes in aluminuium block as shown. The pooled PCR products for 's1' will be placed in 'p1'."
         ),
         tags$div('Mastermix preparation (for 1 sample):'),
         reactableOutput('mastermix', width = "25%")
@@ -119,9 +122,9 @@ server = function(input, output, session) {
     data.frame(
       wells = wells24, 
       samples = 
-        c(paste0('s', seq(1,input$nsamples)),
+        c(paste0('<b>s', seq(1,input$nsamples)),
           rep('.', 16-as.numeric(input$nsamples)),
-          paste0('p', seq(1,input$nsamples)),
+          paste0('<b>p', seq(1,input$nsamples)),
           rep('.', 8-as.numeric(input$nsamples))
           ),
       #palette.colors(4, palette = 'Set3', alpha = 0.3)
@@ -138,10 +141,35 @@ server = function(input, output, session) {
     plater::view_plate(
       data = rack_df(),
       well_ids_column = 'wells', 
-      columns_to_display = 'samples', 24
+      columns_to_display = 'samples', plate_size = 24
     )
   })
   
+  block_df <- reactive({
+    kinnexprimers <- 
+      paste0(
+        '<b>',
+        c(
+          LETTERS[ 1:input$plex - 1 ],
+          paste0(LETTERS[as.numeric(input$plex)], 'Q')
+        )
+      )
+    data.frame(
+      wells = wells24,
+      primers = 
+        c(kinnexprimers,
+          rep('.', 24 - length(kinnexprimers))
+        )
+    )
+  })
+  
+  block <- reactive({
+    plater::view_plate(
+      data = block_df(),
+      well_ids_column = 'wells',
+      columns_to_display = 'primers', plate_size = 24
+    )
+  })
   
   plate_df <- reactive({
     data.frame(
@@ -154,7 +182,7 @@ server = function(input, output, session) {
     plater::view_plate(
       data = plate_df(),
       well_ids_column = 'wells', 
-      columns_to_display = 'samples', 96
+      columns_to_display = 'samples', plate_size = 96
     )
   })
   
@@ -210,6 +238,22 @@ server = function(input, output, session) {
       input$protocol == 'scrna' ~ '176 - X ul',
       input$protocol == '16s' ~ '132 - X ul'
     )
+    mmix_react$kinnexmix = case_when(
+      input$protocol == 'flrna' ~ '110 ul',
+      input$protocol == 'scrna' ~ '220 ul',
+      input$protocol == '16s' ~ '165 ul'
+    )
+    mmix_react$template = case_when(
+      input$protocol == 'flrna' ~ 'X ul (55 ng)',
+      input$protocol == 'scrna' ~ 'X ul (55 ng)',
+      input$protocol == '16s' ~ 'X ul (35 ng)'
+    )
+    mmix_react$total = case_when(
+      input$protocol == 'flrna' ~ '198 ul',
+      input$protocol == 'scrna' ~ '396 ul',
+      input$protocol == '16s' ~ '297 ul'
+    )
+    
   })
   
   
@@ -239,13 +283,24 @@ server = function(input, output, session) {
       highlight = T, wrap = F, 
       bordered = T, compact = T, fullWidth = T, sortable = F,
       defaultColDef = 
-        colDef(minWidth = 40,html = TRUE,
+        colDef(minWidth = 45,html = TRUE,
                headerStyle = list(background = "#f7f7f8", fontSize = '80%'), 
                style = function(value) {
                  color <- rack_df()$color[ match(value, rack_df()$sample) ]
                  list(background = color)
                }
         )
+    )
+  })
+  
+  output$block <- renderReactable({
+    reactable(
+      block()$primers,
+      highlight = T, wrap = F, 
+      bordered = T, compact = T, fullWidth = T, sortable = F,
+      defaultColDef = 
+        colDef(minWidth = 45, html = TRUE,
+               headerStyle = list(background = "#f7f7f8", fontSize = '80%'))
     )
   })
   

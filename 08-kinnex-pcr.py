@@ -74,6 +74,7 @@ def run(ctx: protocol_api.ProtocolContext):
             MMvol,
             rack.wells_by_name()[v],
             [pcrplate.wells_by_name()[well] for well in distribute_wells[:plex]], 
+            air_gap = 1,
             blow_out = True, 
             blowout_location = 'source well' # blowout is required in distribute
         )
@@ -90,20 +91,21 @@ def run(ctx: protocol_api.ProtocolContext):
             [primerblock[well] for well in primerwells[:plex]],
             [pcrplate[well] for well in distribute_wells[:plex]], 
             new_tip = 'always', 
-            mix_after = (3, 10), 
+            air_gap = 1,
+            mix_after = (3, 15), 
             blow_out = False
             )
 
     # PCR
-    # ctx.pause("Optional pause to cover plate with aluminum foil") 
-    # odtc.close_lid()
-    # odtc.set_block_temperature(temperature=98, hold_time_minutes=3)
-    # odtc.execute_profile(steps=pcrprofile, repetitions=ncycles, block_max_volume=20)
-    # odtc.set_block_temperature(temperature=72, hold_time_minutes=5)
-    # odtc.set_block_temperature(10)
-    # odtc.open_lid()
-    # odtc.deactivate_lid()
-    # ctx.comment("--------------------------------------")
+    ctx.pause("Optional pause to cover plate with aluminum foil") 
+    odtc.close_lid()
+    odtc.set_block_temperature(temperature=98, hold_time_minutes=3)
+    odtc.execute_profile(steps=pcrprofile, repetitions=ncycles, block_max_volume=20)
+    odtc.set_block_temperature(temperature=72, hold_time_minutes=5)
+    odtc.set_block_temperature(10)
+    odtc.open_lid()
+    odtc.deactivate_lid()
+    ctx.comment("--------------------------------------")
 
     # # Consolidate PCRs
     for i, v in enumerate(poolwells):
