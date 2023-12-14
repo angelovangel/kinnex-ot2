@@ -23,6 +23,10 @@ tab1 <-  fluidPage(
     box(width = 3, status = "warning", solidHeader = FALSE, height = 450,
       collapsible = F,
       column(12,
+             selectizeInput('left_pipet', 'Left pipette', 
+                            choices = c('p20_single_gen2','p300_single_gen2'), 
+                            selected = 'p20_single_gen2')),
+      column(12,
         selectizeInput('protocol', 'Kinnex protocol', 
                        choices = c('PacBio 16S' = '16s', 'PacBio full-length RNA' = 'flrna', 'PacBio single-cell RNA' = 'scrna'), 
                        selected = 'PacBio 16S', multiple = FALSE)),
@@ -37,8 +41,8 @@ tab1 <-  fluidPage(
       column(6, 
         numericInput('primervol', 'Primer premix vol', value = 2.5, step = 0.1, min = 1, max = 5)),
       column(12, 
-        downloadButton('download_script', 'OT2 script', style = 'margin-top:20px'),
-        actionButton('deck', 'Deck', style = 'margin-top:20px'),
+        downloadButton('download_script', 'OT2 script', style = 'margin-top:5px'),
+        actionButton('deck', 'Deck', style = 'margin-top:5px'),
         uiOutput('show_protocol', inline = T)
       )
     ),
@@ -208,6 +212,9 @@ server = function(input, output, session) {
       ) %>%
       str_replace(
         pattern = 'plex = .*', replacement = paste0('plex = ', input$plex)
+      ) %>%
+      str_replace(
+        pattern = 'left_pipette = .*', replacement = paste0("left_pipette = ", "'", input$left_pipet, "'")
       )
   })
   
@@ -324,7 +331,7 @@ server = function(input, output, session) {
   output$show_protocol <- renderUI({
     actionButton(
       'showpdf', 'Protocol', 
-      style = 'margin-top:20px', 
+      style = 'margin-top:5px', 
       onclick = paste0("window.open('", input$protocol, ".pdf')")
       )
   })
