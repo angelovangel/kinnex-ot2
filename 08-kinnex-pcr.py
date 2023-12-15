@@ -90,7 +90,11 @@ def run(ctx: protocol_api.ProtocolContext):
     # Transfer primers from block to intermediate plate
     ctx.comment("Transfer primers from block to intermediate plate")
     ctx.comment("--------------------------------------")
+    # make sure accurate pipetting if P300 is used
     thisvolume = primervol * nsamples * 1.1
+    if left_pipette == 'p300_single_gen2' and thisvolume < 5:
+        thisvolume = 5
+    
     lp.transfer(
         thisvolume,
         [primerblock[well] for well in primerwells[:plex]],
