@@ -30,6 +30,10 @@ tab1 <-  fluidPage(
         selectizeInput('protocol', 'Kinnex protocol', 
                        choices = c('PacBio 16S' = '16s', 'PacBio full-length RNA' = 'flrna', 'PacBio single-cell RNA' = 'scrna'), 
                        selected = 'PacBio 16S', multiple = FALSE)),
+      column(12,
+        selectizeInput('pipet', 'Left pipette', 
+                       choices = c('p20_single_gen2', 'p300_single_gen2'), 
+                       selected = 'p20_single_gen2')),
       column(6, 
         selectizeInput('plex', 'Kinnex plex', choices = c(8,10,12,14,16), selected = 12, multiple = FALSE)),
       column(6, 
@@ -42,7 +46,11 @@ tab1 <-  fluidPage(
         numericInput('primervol', 'Primer premix vol', value = 2.5, step = 0.1, min = 1, max = 5)),
       column(12, 
         downloadButton('download_script', 'OT2 script', style = 'margin-top:5px'),
+<<<<<<< Updated upstream
         actionButton('deck', 'Deck', style = 'margin-top:5px'),
+=======
+        #actionButton('deck', 'Deck', style = 'margin-top:5px'),
+>>>>>>> Stashed changes
         uiOutput('show_protocol', inline = T)
       )
     ),
@@ -81,6 +89,12 @@ tab2 <- fluidRow(
   )
 )
 
+tab3 <- fluidRow(
+  box(width =12, status = 'warning', solidHeader = FALSE, title = 'Deck view', collapsible = F,
+      htmlOutput('deck')
+      )
+)
+
 
 ui <- dashboardPage(skin = 'black',
                     #useShinyalert(),
@@ -91,8 +105,9 @@ ui <- dashboardPage(skin = 'black',
                     body = dashboardBody(
                       useShinyjs(),
                       tabsetPanel(
-                        tabPanel(title = "Protocol setup", icon = icon("table"), tab1),
-                        tabPanel(title = "Opentrons script preview", icon = icon('code'), tab2)
+                        tabPanel(title = "Protocol setup", icon = icon("vials"), tab1),
+                        tabPanel(title = "Opentrons script preview", icon = icon('code'), tab2),
+                        tabPanel(title = 'Deck view', icon = icon('border-none'), tab3)
                         #tabPanel(title = 'Instructions', icon = icon('list'), tab3)
                       )
                     )
@@ -219,14 +234,14 @@ server = function(input, output, session) {
   })
   
   ### OBSERVERS
-  observeEvent(input$deck, {
-    showModal(
-      modalDialog(title = 'Opentrons deck preview',
-                  HTML('<img src="deck.png">'),
-                  size = 'l', easyClose = T, 
-      )
-    )
-  })
+  # observeEvent(input$deck, {
+  #   showModal(
+  #     modalDialog(title = 'Opentrons deck preview',
+  #                 HTML('<img src="deck.png">'),
+  #                 size = 'l', easyClose = T, 
+  #     )
+  #   )
+  # })
   
   observeEvent(input$protocol, {
     
@@ -324,6 +339,10 @@ server = function(input, output, session) {
                }
         )
     )
+  })
+  
+  output$deck <- renderUI({
+    HTML('<img src="deck.png" height="600">')
   })
   
   ## Decide which protocol to show
