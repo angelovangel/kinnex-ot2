@@ -46,11 +46,7 @@ tab1 <-  fluidPage(
         numericInput('primervol', 'Primer premix vol', value = 2.5, step = 0.1, min = 1, max = 5)),
       column(12, 
         downloadButton('download_script', 'OT2 script', style = 'margin-top:5px'),
-<<<<<<< Updated upstream
-        actionButton('deck', 'Deck', style = 'margin-top:5px'),
-=======
         #actionButton('deck', 'Deck', style = 'margin-top:5px'),
->>>>>>> Stashed changes
         uiOutput('show_protocol', inline = T)
       )
     ),
