@@ -20,7 +20,7 @@ wells96 <- lapply(1:12, function(x) {str_c(LETTERS[1:8], x)}) %>% unlist()
 
 tab1 <-  fluidPage(
   fluidRow(
-    box(width = 3, status = "warning", solidHeader = FALSE, height = 450,
+    box(width = 3, status = "warning", solidHeader = FALSE, height = 550,
       collapsible = F,
       column(12,
              selectizeInput('left_pipet', 'Left pipette (1-channel)', 
@@ -50,7 +50,7 @@ tab1 <-  fluidPage(
         uiOutput('show_protocol', inline = T)
       )
     ),
-    box(width = 9, status = "warning", solidHeader = FALSE, height = 450,
+    box(width = 9, status = "warning", solidHeader = FALSE, height = 550,
       title = htmlOutput('htmlout'), collapsible = F,
       fluidRow(
         column(width = 4,
@@ -81,11 +81,18 @@ tab1 <-  fluidPage(
 
 tab2 <- fluidRow(
   box(width = 12, status = "warning", solidHeader = FALSE, title = "PacBio Kinnex PCR Opentrons script preview", collapsible = F,
-      verbatimTextOutput('protocol_preview')
+    verbatimTextOutput('protocol_preview')
   )
 )
 
 tab3 <- fluidRow(
+  box(width = 12, status = "warning", solidHeader = FALSE, title = "", collapsible = F,
+    actionButton('simulate', 'Simulate run'),
+    verbatimTextOutput('simulate_run')   
+  )
+)
+
+tab4 <- fluidRow(
   box(width =12, status = 'warning', solidHeader = FALSE, title = 'Deck view', collapsible = F,
       htmlOutput('deck')
       )
@@ -102,8 +109,9 @@ ui <- dashboardPage(skin = 'black',
                       useShinyjs(),
                       tabsetPanel(
                         tabPanel(title = "Protocol setup", icon = icon("vials"), tab1),
-                        tabPanel(title = "Opentrons script preview", icon = icon('code'), tab2),
-                        tabPanel(title = 'Deck view', icon = icon('border-none'), tab3)
+                        tabPanel(title = "Opentrons script", icon = icon('code'), tab2),
+                        tabPanel(title = 'Opentrons simulate', icon = icon('code'), tab3),
+                        tabPanel(title = 'Deck view', icon = icon('border-none'), tab4)
                         #tabPanel(title = 'Instructions', icon = icon('list'), tab3)
                       )
                     )
@@ -299,10 +307,10 @@ server = function(input, output, session) {
     reactable(
       rack()$samples,
       highlight = T, wrap = F, 
-      bordered = T, compact = T, fullWidth = T, sortable = F,
+      bordered = T, compact = F, fullWidth = T, sortable = F,
       defaultColDef = 
         colDef(minWidth = 45,html = TRUE,
-               headerStyle = list(background = "#f7f7f8", fontSize = '80%'), 
+               headerStyle = list(background = "#f7f7f8", fontSize = '90%'), 
                style = function(value) {
                  color <- rack_df()$color[ match(value, rack_df()$sample) ]
                  list(background = color)
@@ -315,10 +323,10 @@ server = function(input, output, session) {
     reactable(
       block()$primers,
       highlight = T, wrap = F, 
-      bordered = T, compact = T, fullWidth = T, sortable = F,
+      bordered = T, compact = F, fullWidth = T, sortable = F,
       defaultColDef = 
         colDef(minWidth = 45, html = TRUE,
-               headerStyle = list(background = "#f7f7f8", fontSize = '80%'))
+               headerStyle = list(background = "#f7f7f8", fontSize = '90%'))
     )
   })
   
@@ -326,9 +334,9 @@ server = function(input, output, session) {
     reactable(
       reaction_plate()$samples,
       highlight = T, wrap = F, 
-      bordered = T, compact = T, fullWidth = T, sortable = F,
+      bordered = T, compact = F, fullWidth = T, sortable = F,
       defaultColDef = 
-        colDef(minWidth = 40,html = TRUE, headerStyle = list(background = "#f7f7f8", fontSize = '80%'),
+        colDef(minWidth = 40,html = TRUE, headerStyle = list(background = "#f7f7f8", fontSize = '90%'),
                style = function(value) {
                  color <- rack_df()$color[ match(value, rack_df()$sample) ]
                  list(background = color)
@@ -352,7 +360,7 @@ server = function(input, output, session) {
   })
   
   output$htmlout <- renderUI({
-   paste0("Preview for tuberack and PCR plate")
+   paste0("Preview for tuberack/primer block and PCR plate")
   })
   
   output$protocol_preview <- renderPrint({
