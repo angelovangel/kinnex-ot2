@@ -86,9 +86,12 @@ tab2 <- fluidRow(
 )
 
 tab3 <- fluidRow(
-  box(width = 12, status = "warning", solidHeader = FALSE, title = "", collapsible = F,
-    actionButton('simulate', 'Simulate run'),
-    verbatimTextOutput('simulate_run')   
+  box(
+    width = 12, status = "warning", solidHeader = FALSE, 
+    title = tags$div(actionButton('simulate', 'Simulate run'), actionButton('clear', 'Clear output')), 
+    collapsible = F,
+    #actionButton('simulate', 'Simulate run'),
+    verbatimTextOutput('stdout')   
   )
 )
 
@@ -120,6 +123,10 @@ ui <- dashboardPage(skin = 'black',
 
 # server #
 server = function(input, output, session) {
+  
+  # add opentrons_simulate path
+  old_path <- Sys.getenv("PATH")
+  Sys.setenv(PATH = paste(old_path, Sys.getenv('OPENTRONS_PATH'), sep = ":"))
   
   ### read template
   protocol_url <- "https://raw.githubusercontent.com/angelovangel/opentrons/main/protocols/08-kinnex-pcr.py"
@@ -238,14 +245,42 @@ server = function(input, output, session) {
   })
   
   ### OBSERVERS
-  # observeEvent(input$deck, {
-  #   showModal(
-  #     modalDialog(title = 'Opentrons deck preview',
-  #                 HTML('<img src="deck.png">'),
-  #                 size = 'l', easyClose = T, 
-  #     )
-  #   )
-  # })
+  observeEvent(input$clear, {
+    shinyjs::html(id = "stdout", "")
+  })
+  
+  observeEvent(input$simulate, {
+    # clear stdout
+    shinyjs::html(id = "stdout", "")
+    # check if opentrons_simulate is in path
+    if (system2('which', args = 'opentrons_simulate') == 1) {
+      shinyjs::html(id = 'stdout', "opentrons_simulate executable not found. Set the OPENTRONS_PATH variable to the opentrons path.")
+      return()
+    }
+    # change button when working
+    shinyjs::disable(id = 'simulate')
+    shinyjs::html(id = 'simulate', "Working...")
+    tmp <- tempfile('protocol', fileext = '.py')
+    write(myprotocol(), file = tmp)
+    
+    withCallingHandlers({
+      processx::run(
+        'opentrons_simulate', 
+        args = c('-e', tmp),
+        stderr_to_stdout = TRUE, 
+        error_on_status = FALSE,
+        stdout_line_callback = function(line, proc) {message(line)}, 
+      )
+      shinyjs::enable(id = 'simulate')
+      shinyjs::html(id = 'simulate', "Simulate run")
+    },
+      message = function(m) {
+        shinyjs::html(id = "stdout", html = m$message, add = TRUE); 
+        runjs("document.getElementById('stdout').scrollTo(0,1e9);") 
+        # scroll the page to bottom with each message, 1e9 is just a big number
+      }
+    )
+  })
   
   observeEvent(input$protocol, {
     
