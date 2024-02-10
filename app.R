@@ -37,7 +37,7 @@ tab1 <-  fluidPage(
       column(6, 
         selectizeInput('plex', 'Kinnex plex', choices = c(8,10,12,14,16), selected = 12, multiple = FALSE)),
       column(6, 
-        selectizeInput('nsamples', 'Number of samples', choices = c(1:6), selected = 1, multiple = FALSE)),
+        selectizeInput('nsamples', 'No of samples', choices = c(1:6), selected = 1, multiple = FALSE)),
       column(12, 
         selectizeInput('ncycles', 'PCR cycles', choices = c(9:12), selected = 9, multiple = FALSE)),
       column(6, 
@@ -72,8 +72,16 @@ tab1 <-  fluidPage(
         tags$div("For each sample, prepare Mastermix and place in positions marked s1, s2, etc. 
                Place empty 1.5ml tubes in positions p1, p2, etc. Place Kinnex primer mixes in aluminuium block as shown. The pooled PCR products for 's1' will be placed in 'p1'."
         ),
-        tags$div('Mastermix preparation (for 1 sample):'),
-        reactableOutput('mastermix', width = "25%")
+        column(4,
+          tags$hr(),
+          tags$div(id = 'pcrtext', ''),
+          reactableOutput('mastermix', width = "100%")
+          ),
+        column(5,
+          tags$hr(),
+          tags$i('PCR program'),
+          reactableOutput('pcrtable')
+          )
     )
   )
 )
@@ -129,23 +137,26 @@ server = function(input, output, session) {
   Sys.setenv(PATH = paste(old_path, Sys.getenv('OPENTRONS_PATH'), sep = ":"))
   
   ### read template
-  protocol_url <- "https://raw.githubusercontent.com/angelovangel/opentrons/main/protocols/08-kinnex-pcr.py"
+  # protocol_url <- "https://raw.githubusercontent.com/angelovangel/opentrons/main/protocols/08-kinnex-pcr.py"
   
-  if (curl::has_internet()) {
-    con <- url(protocol_url)
-    protocol_template <- readLines(con, warn = F)
-    close(con)
-  } else {
-    protocol_template <- readLines('08-kinnex-pcr.py', warn = F)
-  }
+  # if (curl::has_internet()) {
+  #   con <- url(protocol_url)
+  #   protocol_template <- readLines(con, warn = F)
+  #   close(con)
+  # } else {
+  protocol_template <- readLines('08-kinnex-pcr.py', warn = F)
+  #}
   
   
   ### REACTIVES
   mmix_react <- reactiveValues(
-    water = '132-X ul',
-    kinnexmix = '165 ul',
-    template = 'X ul (35 ng)',
-    total = '297 ul'
+    water = NA,
+    kinnexmix = NA,
+    template = NA,
+    total = NA,
+    mmwater = NA,
+    mmkinnexmix = NA,
+    mmtotal = NA
   )
   
   rack_df <- reactive({
@@ -282,8 +293,13 @@ server = function(input, output, session) {
     )
   })
   
+  observe({
+    mmix_react$water =11 * as.numeric(input$plex)
+    mmix_react$kinnexmix = 13.75 * as.numeric(input$plex)
+    mmix_react$total = 24.75 * as.numeric(input$plex)
+  })
+  
   observeEvent(input$protocol, {
-    
     updateSelectizeInput(
       session = session,
       'plex',
@@ -294,45 +310,56 @@ server = function(input, output, session) {
       )
     )
     
-    mmix_react$water = case_when(
-      input$protocol == 'flrna' ~ '88 - X ul',
-      input$protocol == 'scrna' ~ '176 - X ul',
-      input$protocol == '16s' ~ '132 - X ul'
-    )
-    mmix_react$kinnexmix = case_when(
-      input$protocol == 'flrna' ~ '110 ul',
-      input$protocol == 'scrna' ~ '220 ul',
-      input$protocol == '16s' ~ '165 ul'
-    )
     mmix_react$template = case_when(
       input$protocol == 'flrna' ~ 'X ul (55 ng)',
       input$protocol == 'scrna' ~ 'X ul (55 ng)',
       input$protocol == '16s' ~ 'X ul (35 ng)'
     )
-    mmix_react$total = case_when(
-      input$protocol == 'flrna' ~ '198 ul',
-      input$protocol == 'scrna' ~ '396 ul',
-      input$protocol == '16s' ~ '297 ul'
-    )
-    
   })
   
   
   
   
   ## OUTPUTS
+  output$pcrtable <- renderReactable({
+    df <- data.frame(
+      Step = c('Initial denaturation', 'Denaturation', 'Annealing', 'Extension', 'Final extension'),
+      Temp = c('98˚C', '98˚C', '68˚C', '72˚C', '72˚C'),
+      Time = c('3 min', '20 sec', '30 sec', if_else(input$protocol == '16s', '90 sec', '4 min'), '5 min'),
+      Repeat = c(1, rep(input$ncycles, 3), 1)
+    )
+    reactable(
+      df, sortable = F
+    )  
+  })
+  
   output$mastermix <- renderReactable({
     pcrvol <- input$MMvol + input$primervol
+    mmtitle <- paste0('Vol for ', input$nsamples, ' samples')
     df <- tibble(
-      Component = c('Water', 'Kinnex PCR mix(2x)', 'Template'),
-      Volume = c(mmix_react$water, mmix_react$kinnexmix, mmix_react$template)
+      component = c('Water', 'Kinnex PCR mix(2x)', 'Template'),
+      vol1x = c(paste0(mmix_react$water, '-X ul'), paste0(mmix_react$kinnexmix, ' ul'), mmix_react$template)
+      # volmm = c(
+      #   '-',
+      #   paste0(mmix_react$kinnexmix * as.numeric(input$nsamples), ' ul'),
+      #   '-'
+      #   )
+    )
+    colnames(df) <- c('Component', 'Volume 1x')
+    shinyjs::html(
+      id = 'pcrtext',
+      paste0(
+        '<i>Mastermix preparation (10% overage included). Total vol: ', mmix_react$total * as.numeric(input$nsamples), ' ul' 
+      )
     )
     
     reactable(
-        df,
+        df, 
+        sortable = F,
         columns = list(
-          Component = colDef(footer = 'Total'),
-          Volume = colDef(footer = mmix_react$total)
+          'Component' = colDef(footer = 'Total'),
+          'Volume 1x' = colDef(footer = paste0(mmix_react$total, ' ul'))
+          #'Volume MM' = colDef(footer = paste0(mmix_react$total * as.numeric(input$nsamples), ' ul'))
         ),
         defaultColDef = colDef(footerStyle = list(fontWeight = "bold"))
       )
