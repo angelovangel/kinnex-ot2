@@ -16,6 +16,7 @@ metadata = {
 #================================================================
 ncycles = 9
 primervol = 2.5
+extensiontime = 90
 MMvol = 22.5
 MMwells = ['A1', 'B1', 'C1'] # on rack
 #MMwells = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2'] # on rack
@@ -32,7 +33,7 @@ left_pipette = 'p300_single_gen2'
 pcrprofile = [
     {'temperature':98, 'hold_time_seconds':20},
     {'temperature':68, 'hold_time_seconds':30},
-    {'temperature':72, 'hold_time_seconds':240}
+    {'temperature':72, 'hold_time_seconds':extensiontime}
     ]
 #================================================================
 
@@ -161,7 +162,8 @@ def run(ctx: protocol_api.ProtocolContext):
     odtc.deactivate_lid()
     odtc.deactivate_block()
     ctx.comment("--------------------------------------")
-
+    
+    ctx.pause("Optional pause to uncover plate with aluminum foil") 
     # # Consolidate PCRs
     for i, v in enumerate(poolwells):
         distribute_wells =  [ j + str(i*2 + 1) for j in rows ] + [ j + str(i*2 + 2) for j in rows ]

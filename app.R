@@ -23,17 +23,17 @@ tab1 <-  fluidPage(
     box(width = 3, status = "warning", solidHeader = FALSE, height = 550,
       collapsible = F,
       column(12,
-             selectizeInput('left_pipet', 'Left pipette (1-channel)', 
+        selectizeInput('left_pipet', 'Left pipette (1-channel)', 
                             choices = c('P20 Gen2' = 'p20_single_gen2','P300 Gen2' = 'p300_single_gen2'), 
                             selected = 'p20_single_gen2')),
       column(12,
         selectizeInput('protocol', 'Kinnex protocol', 
                        choices = c('PacBio 16S' = '16s', 'PacBio full-length RNA' = 'flrna', 'PacBio single-cell RNA' = 'scrna'), 
                        selected = 'PacBio 16S', multiple = FALSE)),
-      column(12,
-        selectizeInput('pipet', 'Left pipette', 
-                       choices = c('p20_single_gen2', 'p300_single_gen2'), 
-                       selected = 'p20_single_gen2')),
+      # column(12,
+      #   selectizeInput('pipet', 'Left pipette', 
+      #                  choices = c('p20_single_gen2', 'p300_single_gen2'), 
+      #                  selected = 'p20_single_gen2')),
       column(6, 
         selectizeInput('plex', 'Kinnex plex', choices = c(8,10,12,14,16), selected = 12, multiple = FALSE)),
       column(6, 
@@ -44,6 +44,13 @@ tab1 <-  fluidPage(
         numericInput('MMvol', 'Mastermix vol', value = 22.5, step = 0.1, min = 10, max = 25)),
       column(6, 
         numericInput('primervol', 'Primer premix vol', value = 2.5, step = 0.1, min = 1, max = 5)),
+      # column(6, checkboxInput('pause_before', 'Pause before PCR')),
+      # column(6, checkboxInput('pause_after', 'Pause after PCR')),
+      column(12, 
+        checkboxGroupInput(inputId = 'pause', label = 'Pause', 
+            choices = c('before pcr' = 'before_pcr', 'after pcr' = 'after_pcr'), 
+            inline = T, selected = c('before_pcr', 'after_pcr'))
+        ),
       column(12, 
         downloadButton('download_script', 'OT2 script', style = 'margin-top:5px'),
         #actionButton('deck', 'Deck', style = 'margin-top:5px'),
@@ -231,7 +238,9 @@ server = function(input, output, session) {
     
     MMwells <- paste0("['", str_flatten(wells24[1:input$nsamples], collapse = "','"), "']")
     poolwells <- paste0("['", str_flatten(wells24[17:(17+as.numeric(input$nsamples)-1)], collapse = "','"), "']") # A5 is wells24[17]
-    
+    extensiontime <- if_else(
+      input$protocol == '16s', 90, 240
+    )
     str_replace(
       string = protocol_template, pattern = 'ncycles = .*', replacement = paste0('ncycles = ', input$ncycles)
       ) %>% 
@@ -252,6 +261,9 @@ server = function(input, output, session) {
       ) %>%
       str_replace(
         pattern = 'left_pipette = .*', replacement = paste0("left_pipette = ", "'", input$left_pipet, "'")
+      ) %>%
+      str_replace(
+        pattern = 'extensiontime = .*', replacement = paste0('extensiontime = ', extensiontime)
       )
   })
   
