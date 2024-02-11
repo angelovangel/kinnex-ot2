@@ -349,7 +349,7 @@ server = function(input, output, session) {
     shinyjs::html(
       id = 'pcrtext',
       paste0(
-        '<i>Mastermix preparation (10% overage included). Total vol: ', mmix_react$total * as.numeric(input$nsamples), ' ul' 
+        '<i>Mastermix preparation (10% overage included). Kinnex needed: ', mmix_react$kinnexmix * as.numeric(input$nsamples), ' ul' 
       )
     )
     
