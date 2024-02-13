@@ -83,7 +83,7 @@ def run(ctx: protocol_api.ProtocolContext):
             rack.wells_by_name()[v],
             [pcrplate.wells_by_name()[well] for well in distribute_wells[:plex]], 
             air_gap = 0, 
-            disposal_volume = 3
+            disposal_volume = 0 
             #blow_out = False, 
             #blowout_location = 'destination well' # blowout is required in distribute
         )
@@ -93,8 +93,9 @@ def run(ctx: protocol_api.ProtocolContext):
     ctx.comment("--------------------------------------")
     # make sure accurate pipetting if P300 is used
     thisvolume = primervol * nsamples * 1.1
-    if left_pipette == 'p300_single_gen2' and thisvolume < 5:
-        thisvolume = 5
+    if left_pipette == 'p300_single_gen2' and thisvolume < 10:
+        thisvolume = 10
+        ctx.pause('Using p300 for pipetting less than 20 ul! Will distribute 10 ul primer mix to intermediate plate, but ' + str(primervol * nsamples * 1.1) + ' will be used')
     
     lp.transfer(
         thisvolume,

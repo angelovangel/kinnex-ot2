@@ -10,6 +10,7 @@ library(dplyr)
 library(rmarkdown)
 library(curl)
 library(plater)
+library(shinybusy)
 
 source('global.R')
 
@@ -299,7 +300,7 @@ server = function(input, output, session) {
     },
       message = function(m) {
         shinyjs::html(id = "stdout", html = m$message, add = TRUE); 
-        runjs("document.getElementById('stdout').scrollTo(0,1e9);") 
+        runjs("document.getElementById('stdout').parentElement.scrollTo({ top: 1e9, behavior: 'smooth' });") 
         # scroll the page to bottom with each message, 1e9 is just a big number
       }
     )
@@ -329,7 +330,16 @@ server = function(input, output, session) {
     )
   })
   
-  
+  observe({
+    primer_distr_vol <- as.numeric(input$nsamples) * as.numeric(input$primervol) * 1.1
+    if (primer_distr_vol < 10 & input$left_pipet == 'p300_single_gen2') {
+      shinybusy::report_info(
+        'Using p300 for less than 10 ul', 
+        text = paste0(
+        'Will distribute 10 ul primermix to intermediate plate (', primer_distr_vol, ' will be used in PCR)')
+      )
+    }
+  })
   
   
   ## OUTPUTS
