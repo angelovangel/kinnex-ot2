@@ -16,7 +16,6 @@ metadata = {
 #================================================================
 ncycles = 9
 primervol = 2.5
-extensiontime = 90
 MMvol = 22.5
 MMwells = ['A1', 'B1', 'C1'] # on rack
 #MMwells = ['A1', 'B1', 'C1', 'D1', 'A2', 'B2'] # on rack
@@ -33,7 +32,7 @@ left_pipette = 'p300_single_gen2'
 pcrprofile = [
     {'temperature':98, 'hold_time_seconds':20},
     {'temperature':68, 'hold_time_seconds':30},
-    {'temperature':72, 'hold_time_seconds':extensiontime}
+    {'temperature':72, 'hold_time_seconds':240}
     ]
 #================================================================
 
@@ -92,11 +91,14 @@ def run(ctx: protocol_api.ProtocolContext):
     ctx.comment("Transfer primers from block to intermediate plate")
     ctx.comment("--------------------------------------")
     # make sure accurate pipetting if P300 is used
-    thisvolume = primervol * nsamples * 1.1
+    thisvolume = primervol * nsamples * 1.5
     if left_pipette == 'p300_single_gen2' and thisvolume < 10:
         thisvolume = 10
         ctx.pause('Using p300 for pipetting less than 20 ul! Will distribute 10 ul primer mix to intermediate plate, but ' + str(primervol * nsamples * 1.1) + ' will be used')
-    
+    # make sure enough primer is available in the intermediate plate even for 1 sample
+    if thisvolume < 5:
+        thisvolume = 5
+
     lp.transfer(
         thisvolume,
         [primerblock[well] for well in primerwells[:plex]],
@@ -163,8 +165,7 @@ def run(ctx: protocol_api.ProtocolContext):
     odtc.deactivate_lid()
     odtc.deactivate_block()
     ctx.comment("--------------------------------------")
-    
-    ctx.pause("Optional pause to uncover plate with aluminum foil") 
+
     # # Consolidate PCRs
     for i, v in enumerate(poolwells):
         distribute_wells =  [ j + str(i*2 + 1) for j in rows ] + [ j + str(i*2 + 2) for j in rows ]
