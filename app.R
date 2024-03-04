@@ -140,6 +140,7 @@ ui <- dashboardPage(skin = 'black',
 # server #
 server = function(input, output, session) {
   
+  shinyjs::disable('pause')
   # add opentrons_simulate path
   old_path <- Sys.getenv("PATH")
   Sys.setenv(PATH = paste(old_path, Sys.getenv('OPENTRONS_PATH'), sep = ":"))
