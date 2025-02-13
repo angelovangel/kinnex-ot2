@@ -14,6 +14,8 @@ library(shinybusy)
 
 source('global.R')
 
+gitcommit <- system("git rev-parse HEAD", intern=TRUE)
+
 # for use on rack and aluminium block 
 wells24 <- lapply(1:6, function(x) {str_c(LETTERS[1:4], x)}) %>% unlist()
 wells96 <- lapply(1:12, function(x) {str_c(LETTERS[1:8], x)}) %>% unlist()
@@ -87,7 +89,7 @@ tab1 <-  fluidPage(
           ),
         column(5,
           tags$hr(),
-          tags$i('PCR program'),
+          tags$div(id = 'pcr_protocol_text', ''),
           reactableOutput('pcrtable')
           )
     )
@@ -121,7 +123,17 @@ tab4 <- fluidRow(
 ui <- dashboardPage(skin = 'black',
                     #useShinyalert(),
                     
-                    header = dashboardHeader(title = "PacBio Kinnex PCR for Opentrons", titleWidth = 400),
+                    header = dashboardHeader(
+                      title = "PacBio Kinnex PCR for Opentrons", 
+                      titleWidth = 400,
+                      dropdownMenu(
+                        type = 'notifications', 
+                        notificationItem(
+                          href = 'https://github.com/angelovangel/kinnex-ot2/commits/main/', 
+                          text = str_trunc(gitcommit, width = 7, ellipsis = ''), 
+                          icon = icon('github'))
+                      )
+                      ),
                     sidebar = dashboardSidebar(disable = T),
                     
                     body = dashboardBody(
@@ -351,6 +363,12 @@ server = function(input, output, session) {
       Time = c('3 min', '20 sec', '30 sec', if_else(input$protocol == '16s', '90 sec', '4 min'), '5 min'),
       Repeat = c(1, rep(input$ncycles, 3), 1)
     )
+    shinyjs::html(
+      id = 'pcr_protocol_text',
+      paste0(
+        '<i>PCR program for <b>', input$protocol,'.' 
+      )
+    )
     reactable(
       df, sortable = F
     )  
@@ -372,7 +390,7 @@ server = function(input, output, session) {
     shinyjs::html(
       id = 'pcrtext',
       paste0(
-        '<i>Mastermix preparation (10% overage included). Kinnex needed: ', mmix_react$kinnexmix * as.numeric(input$nsamples), ' ul' 
+        '<i>Mastermix (10% overage included) for <b>', input$protocol,'. </b>Kinnex needed: ', mmix_react$kinnexmix * as.numeric(input$nsamples), ' ul' 
       )
     )
     
